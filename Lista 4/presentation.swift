@@ -647,7 +647,7 @@ class SplayTree {
             return
         }
         
-        let splayed = splay(root, key, &compareCount, &pointerSubstitutionCount)
+        let splayed = splay(key, root, &compareCount, &pointerSubstitutionCount)
         if key < splayed!.data {
             compareCount += 1
             let newNode = NodeST(key)
@@ -697,98 +697,95 @@ class SplayTree {
         guard let node = node else {
             return nil
         }
-        root = splay(node, key, &compareCount, &pointerSubstitutionCount)
-        if key == root?.data {
+        
+        root = splay(key, node, &compareCount, &pointerSubstitutionCount)
+        
+        guard let rootNode = root, rootNode.data == key else {
+            return root
+        }
+        
+        if rootNode.left == nil {
             compareCount += 1
-            if root?.left == nil {
-                compareCount += 1
-                root = root?.right
-                root?.parent = nil
-                pointerSubstitutionCount += 2
-            } else {
-                compareCount += 1
-                let rightSubtree = root?.right
-                root = root?.left
-                root = splay(root, key, &compareCount, &pointerSubstitutionCount)
+            root = rootNode.right
+            root?.parent = nil
+            pointerSubstitutionCount += 2
+        } else {
+            compareCount += 1
+            let rightSubtree = rootNode.right
+            root = rootNode.left
+            root?.parent = nil
+            pointerSubstitutionCount += 2
+            if let newRoot = root {
+                root = splay(findMax(newRoot)?.data ?? key, newRoot, &compareCount, &pointerSubstitutionCount)
                 root?.right = rightSubtree
                 rightSubtree?.parent = root
-                pointerSubstitutionCount += 4
-                if let rightChild = root?.right {
-                    compareCount += 1
-                    rightChild.parent = nil
-                    pointerSubstitutionCount += 1
-                }
+                pointerSubstitutionCount += 2
             }
         }
+        
         return root
     }
 
-    func splay(_ node: NodeST?, _ key: Int, _ compareCount: inout Int, _ pointerSubstitutionCount: inout Int) -> NodeST? {
-        guard let node = node else {
+
+    func splay( _ key: Int, _ node: NodeST?, _ compareCount: inout Int, _ pointerSubstitutionCount: inout Int) -> NodeST? {
+        guard let root = node else {
             return nil
         }
-    
-        if key < node.data {
+        
+        if root.data == key {
+            return root
+        }
+        
+        if key < root.data {
             compareCount += 1
-            guard let leftChild = node.left else {
-                return node
+            if root.left == nil {
+                compareCount += 1
+                return root
             }
-        
-            if key < leftChild.data {
+            
+            if key < root.left!.data {
                 compareCount += 1
-                leftChild.left = splay(leftChild.left, key, &compareCount, &pointerSubstitutionCount)
-                pointerSubstitutionCount += 1
-                return rotateRight(node, &compareCount, &pointerSubstitutionCount)
-            } else if key > leftChild.data {
+                root.left!.left = splay(key, root.left!.left, &compareCount, &pointerSubstitutionCount)
+                root.left = rotateRight(root.left!, &compareCount, &pointerSubstitutionCount)
+                pointerSubstitutionCount += 2
+            } else if key > root.left!.data {
                 compareCount += 1
-                leftChild.right = splay(leftChild.right, key, &compareCount, &pointerSubstitutionCount)
+                root.left!.right = splay(key, root.left!.right, &compareCount, &pointerSubstitutionCount)
                 pointerSubstitutionCount += 1
-                if let left = node.left {
+                if root.left!.right != nil {
                     compareCount += 1
-                   _ = rotateLeft(left, &compareCount, &pointerSubstitutionCount)
+                    root.left = rotateLeft(root.left!, &compareCount, &pointerSubstitutionCount)
+                    pointerSubstitutionCount += 1
                 }
-                return rotateRight(node, &compareCount, &pointerSubstitutionCount)
             }
-        
-            if let left = node.left, key == left.data {
-                compareCount += 1
-                return rotateRight(node, &compareCount, &pointerSubstitutionCount)
-            }
-        
-            return node
-        } else if key > node.data {
-            compareCount += 1
-            guard let rightChild = node.right else {
-                return node
-            }
-        
-            if key > rightChild.data {
-                compareCount += 1
-                rightChild.right = splay(rightChild.right, key, &compareCount, &pointerSubstitutionCount)
-                pointerSubstitutionCount += 1
-                return rotateLeft(node, &compareCount, &pointerSubstitutionCount)
-            } else if key < rightChild.data {
-                compareCount += 1
-                rightChild.left = splay(rightChild.left, key, &compareCount, &pointerSubstitutionCount)
-                pointerSubstitutionCount += 1
-                if let right = node.right {
-                    compareCount += 1
-                    _ = rotateRight(right, &compareCount, &pointerSubstitutionCount)
-                }
-                return rotateLeft(node, &compareCount, &pointerSubstitutionCount)
-            }
-        
-            if let right = node.right, key == right.data {
-                compareCount += 1
-                return rotateLeft(node, &compareCount, &pointerSubstitutionCount)
-            }
-        
-            return node
+            
+            return root.left == nil ? root : rotateRight(root, &compareCount, &pointerSubstitutionCount)
         } else {
-            return node
+            compareCount += 1
+            if root.right == nil {
+                compareCount += 1
+                return root
+            }
+            
+            if key < root.right!.data {
+                compareCount += 1
+                root.right!.left = splay(key, root.right!.left, &compareCount, &pointerSubstitutionCount)
+                pointerSubstitutionCount += 1
+                if root.right!.left != nil {
+                    compareCount += 1
+                    root.right = rotateRight(root.right!, &compareCount, &pointerSubstitutionCount)
+                    pointerSubstitutionCount += 1
+                }
+            } else if key > root.right!.data {
+                compareCount += 1
+                root.right!.right = splay(key, root.right!.right, &compareCount, &pointerSubstitutionCount)
+                root.right = rotateLeft(root.right!, &compareCount, &pointerSubstitutionCount)
+                pointerSubstitutionCount += 2
+            }
+            
+            return root.right == nil ? root : rotateLeft(root, &compareCount, &pointerSubstitutionCount)
         }
     }
-
 
     func rotateRight(_ node: NodeST, _ compareCount: inout Int, _ pointerSubstitutionCount: inout Int) -> NodeST? {
         guard let leftChild = node.left else {
@@ -796,8 +793,15 @@ class SplayTree {
         }
 
         node.left = leftChild.right
+        compareCount += 1
+        if let rightOfLeft = leftChild.right {
+            rightOfLeft.parent = node
+            pointerSubstitutionCount += 1
+        }
         leftChild.right = node
-        pointerSubstitutionCount += 2
+        leftChild.parent = node.parent
+        node.parent = leftChild
+        pointerSubstitutionCount += 4
 
         return leftChild
     }
@@ -808,8 +812,15 @@ class SplayTree {
         }
 
         node.right = rightChild.left
+        compareCount += 1
+        if let leftOfRight = rightChild.left {
+            leftOfRight.parent = node
+            pointerSubstitutionCount += 1
+        }
         rightChild.left = node
-        pointerSubstitutionCount += 2
+        rightChild.parent = node.parent
+        node.parent = rightChild
+        pointerSubstitutionCount += 4
 
         return rightChild
     }
@@ -819,6 +830,14 @@ class SplayTree {
             return 0
         }
         return 1 + max(height(root.left), height(root.right))
+    }
+
+    func findMax(_ node: NodeST?) -> NodeST? {
+        var current = node
+        while let right = current?.right {
+            current = right
+        }
+        return current
     }
 
     func printST(_ root: NodeST?, _ depth: Int, _ prefixx: Character, _ leftTrace: inout [Character], _ rightTrace: inout [Character]) {

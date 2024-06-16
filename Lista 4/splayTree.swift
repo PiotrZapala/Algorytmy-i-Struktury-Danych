@@ -63,77 +63,73 @@ class SplayTree {
         guard let node = node else {
             return nil
         }
+        
         root = splay(key, node)
-        if key == root?.data {
-            if root?.left == nil {
-                root = root?.right
-                root?.parent = nil
-            } else {
-                let rightSubtree = root?.right
-                root = root?.left
-                root = splay(key, root)
+        
+        guard let rootNode = root, rootNode.data == key else {
+            return root
+        }
+        
+        if rootNode.left == nil {
+            root = rootNode.right
+            root?.parent = nil
+        } else {
+            let rightSubtree = rootNode.right
+            root = rootNode.left
+            root?.parent = nil
+            if let newRoot = root {
+                root = splay(findMax(newRoot)?.data ?? key, newRoot)
                 root?.right = rightSubtree
                 rightSubtree?.parent = root
-                if let rightChild = root?.right {
-                    rightChild.parent = nil
-                }
             }
         }
+        
         return root
     }
 
     func splay(_ key: Int, _ node: Node?) -> Node? {
-        guard let node = node else {
+        guard let root = node else {
             return nil
         }
-    
-        if key < node.data {
-            guard let leftChild = node.left else {
-                return node
-            }
         
-            if key < leftChild.data {
-                leftChild.left = splay(key, leftChild.left)
-                return rotateRight(node)
-            } else if key > leftChild.data {
-                leftChild.right = splay(key, leftChild.right)
-                if let left = node.left {
-                   _ = rotateLeft(left)
+        if root.data == key {
+            return root
+        }
+        
+        if key < root.data {
+            if root.left == nil {
+                return root
+            }
+            
+            if key < root.left!.data {
+                root.left!.left = splay(key, root.left!.left)
+                root.left = rotateRight(root.left!)
+            } else if key > root.left!.data {
+                root.left!.right = splay(key, root.left!.right)
+                if root.left!.right != nil {
+                    root.left = rotateLeft(root.left!)
                 }
-                return rotateRight(node)
             }
-        
-            if let left = node.left, key == left.data {
-                return rotateRight(node)
-            }
-        
-            return node
-        } else if key > node.data {
-            guard let rightChild = node.right else {
-                return node
-            }
-        
-            if key > rightChild.data {
-                rightChild.right = splay(key, rightChild.right)
-                return rotateLeft(node)
-            } else if key < rightChild.data {
-                rightChild.left = splay(key, rightChild.left)
-                if let right = node.right {
-                    _ = rotateRight(right)
-                }
-                return rotateLeft(node)
-            }
-        
-            if let right = node.right, key == right.data {
-                return rotateLeft(node)
-            }
-        
-            return node
+            
+            return root.left == nil ? root : rotateRight(root)
         } else {
-            return node
+            if root.right == nil {
+                return root
+            }
+            
+            if key < root.right!.data {
+                root.right!.left = splay(key, root.right!.left)
+                if root.right!.left != nil {
+                    root.right = rotateRight(root.right!)
+                }
+            } else if key > root.right!.data {
+                root.right!.right = splay(key, root.right!.right)
+                root.right = rotateLeft(root.right!)
+            }
+            
+            return root.right == nil ? root : rotateLeft(root)
         }
     }
-
 
     func rotateRight(_ node: Node) -> Node? {
         guard let leftChild = node.left else {
@@ -141,7 +137,12 @@ class SplayTree {
         }
 
         node.left = leftChild.right
+        if let rightOfLeft = leftChild.right {
+            rightOfLeft.parent = node
+        }
         leftChild.right = node
+        leftChild.parent = node.parent
+        node.parent = leftChild
 
         return leftChild
     }
@@ -152,7 +153,12 @@ class SplayTree {
         }
 
         node.right = rightChild.left
+        if let leftOfRight = rightChild.left {
+            leftOfRight.parent = node
+        }
         rightChild.left = node
+        rightChild.parent = node.parent
+        node.parent = rightChild
 
         return rightChild
     }
@@ -336,35 +342,17 @@ func createTreeWithRandomKeys(_ n: Int) -> SplayTree {
     
     return tree
 }
-/*
-// Case 1: Wstawianie rosnącego ciągu kluczy, a następnie usuwanie losowego ciągu kluczy
-let n = 20
-print("Wstawianie rosnącego ciągu \(n) kluczy:")
-let ascendingKeysTree = createTreeWithAscendingKeys(n)
-ascendingKeysTree.printBST(ascendingKeysTree.root, 0, "-")
-print()
-*/
-// Case 2: Wstawianie losowego ciągu kluczy, a następnie usuwanie losowego ciągu kluczy
-/*
-let n = 20
-print("Wstawianie losowego ciągu \(n) kluczy:")
-let treeWithRandomKeys = createTreeWithRandomKeys(n)
-var leftTrace = [Character](repeating: " ", count: n)
-var rightTrace = [Character](repeating: " ", count: n)
-treeWithRandomKeys.printHeight(treeWithRandomKeys.root)
-treeWithRandomKeys.printST(treeWithRandomKeys.root, 0, "-", &leftTrace, &rightTrace)
-print()
-*/
+
 let splayTree = SplayTree()
 
-// Wstawianie węzłów do drzewa
-splayTree.insertNode(5)
-splayTree.insertNode(3)
-splayTree.insertNode(7)
+splayTree.insertNode(1)
 splayTree.insertNode(2)
+splayTree.insertNode(3)
 splayTree.insertNode(4)
+splayTree.insertNode(5)
 splayTree.insertNode(6)
-splayTree.insertNode(8)
+splayTree.insertNode(7)
+
 
 print("Drzewo po wstawieniu węzłów:")
 var leftTrace = [Character](repeating: " ", count: 10)
@@ -372,7 +360,6 @@ var rightTrace = [Character](repeating: " ", count: 10)
 splayTree.printST(splayTree.root, 0, "-", &leftTrace, &rightTrace)
 print()
 
-// Usuwanie węzła z drzewa
 let newTree = splayTree.deleteNode(4, splayTree.root)
 
 print("Drzewo po usunięciu węzła:")

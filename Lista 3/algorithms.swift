@@ -23,6 +23,30 @@ func printArray(_ myArray: [Int]) {
     print()
 }
 
+func checkIfSorted(_ myArray: [Int]) {
+    var isSorted = true
+    for i in 1..<myArray.count {
+        if myArray[i] < myArray[i - 1] {
+            isSorted = false
+            break
+        }
+    }
+    if isSorted == true {
+        print("Tablica została pomyślnie posortowana!")
+    } else {
+        print("Tablica nie została pomyślnie posortowana!")
+    }
+}
+
+func median(_ myArray: [Int]) -> Int {
+    if myArray.count % 2 == 1 {
+        return myArray[myArray.count / 2]
+    } else {
+        let midIndex = myArray.count / 2
+        return Int((myArray[midIndex - 1] + myArray[midIndex]) / 2)
+    }
+}
+
 func swap(_ myArray: inout [Int], _ first: Int, _ second: Int, _ shiftCount: inout Int) {
     let temp = myArray[first]
     myArray[first] = myArray[second]
@@ -77,6 +101,21 @@ func compare(_ type: String, _ first: Int, _ second: Int, _ compareCount: inout 
     }
 }
 
+func insertionSort(_ arr: [Int], _ compareCount: inout Int, _ shiftCount: inout Int) -> [Int] {
+    var myArray = arr
+    for j in 1..<myArray.count {
+        let key = myArray[j]
+        var i = j - 1
+        while i >= 0 && compare("gt", myArray[i], key, &compareCount) {
+            myArray[i+1] = myArray[i]
+            i -= 1
+            shiftCount += 1
+        }
+        myArray[i+1] = key
+    }
+    return myArray
+}
+
 func partitionModified(_ array: inout [Int], _ start: Int, _ end: Int, _ pivot: Int, _ shiftCount: inout Int, _ compareCount: inout Int) -> Int {
     var iterator = start
     var pivotPos = 0
@@ -121,7 +160,8 @@ func select(_ array: inout [Int], _ start: Int, _ end: Int, _ k: Int, _ shiftCou
     var medians: [Int] = []
 
     for lis in listOfList {
-        medians.append(lis[lis.count / 2])
+        let lis = insertionSort(lis, &compareCount, &shiftCount)
+        medians.append(median(lis))
     }
 
     let medsLength = medians.count
@@ -161,6 +201,7 @@ func partition(_ array: inout [Int], _ begin: Int, _ end: Int, _ shiftCount: ino
     swap(&array, begin, j, &shiftCount)
     return j + 1
 }
+
 
 func randomizedPartition(_ array: inout [Int], _ begin: Int, _ end: Int, _ shiftCount: inout Int, _ compareCount: inout Int) -> Int {
     let tmp = Int.random(in: begin..<end)
@@ -220,7 +261,6 @@ func partitionMod(_ array: inout [Int], _ start: Int, _ end: Int, _ pivot: Int, 
     return (low, high)
 }
 
-
 func quickSelectSort(_ array: inout [Int], _ start: Int, _ end: Int, _ shiftCount: inout Int, _ compareCount: inout Int) {
     if start < end {
         let k = end - start + 1
@@ -232,27 +272,52 @@ func quickSelectSort(_ array: inout [Int], _ start: Int, _ end: Int, _ shiftCoun
     }
 }
 
-func quickRandomizedSelectSort(_ array: inout [Int], _ start1: Int, _ end1: Int, _ shiftCount: inout Int, _ compareCount: inout Int) {
-    var start = start1
-    var end = end1
-    while start < end {
-        compareCount += 1
-        if end - start < 1000 {
-            for pivot in start..<end {
-                _ = randomizedSelect(&array, start, end, pivot, &shiftCount, &compareCount)
+func dualPivotPartitionMod(_ array: inout [Int], _ start: Int, _ end: Int, _ compareCount: inout Int, _ shiftCount: inout Int) -> (Int, Int) {
+    let size = end - start + 1
+    let roundedK1 = Int(floor(Double(size) / 3)) + 1
+    let roundedK2 = Int(floor(2*(Double(size) / 3))) + 1
+    var p = select(&array, start, end, roundedK1, &shiftCount, &compareCount)!
+    var q = select(&array, start, end, roundedK2, &shiftCount, &compareCount)!
+    if compare("lt", q, p, &compareCount) {
+        let temp = p
+        p = q
+        q = temp
+    }
+    
+    var j = start + 1
+    var k = j
+    var g = end - 1
+    
+    while k <= g {
+        if compare("lt", array[k], p, &compareCount) {
+            swap(&array, k, j, &shiftCount)
+            j += 1
+        } else if compare("ge", array[k], q, &compareCount) {
+            while compare("gt", array[g], q, &compareCount) && k < g {
+                g -= 1
             }
-            break
-        } else {
-            let p = partition(&array, start, end, &shiftCount, &compareCount)
-            compareCount += 1
-            if p - start < end - p {
-                quickRandomizedSelectSort(&array, start, p - 1, &shiftCount, &compareCount)
-                start = p + 1
-            } else {
-                quickRandomizedSelectSort(&array, p + 1, end, &shiftCount, &compareCount)
-                end = p - 1
+            swap(&array, k, g, &shiftCount)
+            g -= 1
+            if compare("lt", array[k], p, &compareCount) {
+                swap(&array, k, j, &shiftCount)
+                j += 1
             }
         }
+        k += 1
+    }
+    
+    j -= 1
+    g += 1   
+    
+    return (j, g)
+}
+
+func dualPivotQuickSelectSort(_ myArray: inout [Int], _ start: Int, _ end: Int, _ compareCount: inout Int, _ shiftCount: inout Int) {
+    if start < end {
+        let (leftPivot, rightPivot) = dualPivotPartitionMod(&myArray, start, end, &compareCount, &shiftCount)
+        dualPivotQuickSelectSort(&myArray, start, leftPivot - 1, &compareCount, &shiftCount)
+        dualPivotQuickSelectSort(&myArray, leftPivot + 1, rightPivot - 1, &compareCount, &shiftCount)
+        dualPivotQuickSelectSort(&myArray, rightPivot + 1, end, &compareCount, &shiftCount)
     }
 }
 
@@ -264,7 +329,7 @@ func main() {
         print("2. Randomized Select")
         print("3. Binary Search")
         print("4. Quick Select Sort")
-        print("5. Quick Randomized Select Sort")
+        print("5. Dual Pivot Quick Select Sort")
         print("6. Zamknij program")
         if let input1 = readLine(), let number1 = Int(input1) {
             switch number1 {
@@ -435,9 +500,9 @@ func main() {
                     } else {
                         print("Nieprawidłowe dane wejściowe.")
                         print()
-                    }
+                    }    
                 case 5:
-                    print("Wybrałeś/aś Quick Randomized Select Sort'a!")
+                    print("Wybrałeś/aś Dual Pivot Quick Select Sort'a!")
                     print("Podaj rozmiar tablicy do wygenerowania")
                     if let input2 = readLine(), let number2 = Int(input2) {
                         print("Wprowadzony rozmiar to: \(number2)")
@@ -447,7 +512,7 @@ func main() {
                         let arr = myArray
                         var compareCount = 0
                         var shiftCount = 0
-                        quickRandomizedSelectSort(&myArray, 0, myArray.count-1, &shiftCount, &compareCount)
+                        dualPivotQuickSelectSort(&myArray, 0, myArray.count-1, &shiftCount, &compareCount)
                         if number2 < 50 {
                             print()
                             print("Wygenerowana tablica:")
@@ -470,8 +535,7 @@ func main() {
                     } else {
                         print("Nieprawidłowe dane wejściowe.")
                         print()
-                    }
-                    
+                    } 
                 case 6:
                     exit(0)   
                 
